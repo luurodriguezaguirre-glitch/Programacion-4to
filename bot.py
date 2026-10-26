@@ -135,14 +135,20 @@ sucursales = {"Oeste": ["Merlo", "Castelar", "Ramos Mejía"],
 # FUNCIÓN PARA BUSCAR USUARIO POR DNI
 def buscarUsuarioPorDni(nroBuscado):
   print("\nBuscando usuario...")
+  for u in usuarios:
+    if u['Dni'] == nroBuscado:
+      return u
+  return None
 
 # FUNCIÓN PARA CONSULTAR EL SALDO
 def consultarSaldo(usuario):
   print("\nConsultando Saldo...")
+  return usuario['Saldo']
 
 # FUNCIÓN PARA CONSULTAR FACTURAS
 def consultarFacturas(usuario):
   print("\nConsultando Facturas...")
+  return usuario['FacturasAdeudadas']
 
 # FUNCIÓN PARA PAGAR FACTURAS
 def pagarFacturas(usuario):
