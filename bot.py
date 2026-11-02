@@ -132,7 +132,7 @@ sucursales = {"Oeste": ["Merlo", "Castelar", "Ramos Mejía"],
 
 # --- FUNCIONES DEL CHATBOT ---
 
-# FUNCIÓN PARA BUSCAR USUARIO POR DNI
+# FUNCIÓN PARA BUSCAR USUARIO POR DNI   
 """Busca un usuario por DNI y devuelve sus datos o None si no existe"""
     print("\nBuscando usuario...")
     for u in usuarios:
@@ -185,47 +185,97 @@ pagarFacturas(usuario):
 
 # FUNCIÓN PARA CONSULTAR SUCURSALES
 def consultarSucursales():
-  print("\nAccediendo a datos de sucursales...")
-
+  print("\n Sucursales disponibles:")
+    for zona, direcciones in sucursales.items():
+        print(f"\n{zona}:")
+        for dir in direcciones:
+            print(f"  - {dir}")
 # FUNCIÓN PARA SACAR TURNO
-def sacarTurno():
-  print("\nObteniendo horarios disponibles...")
 
+def sacarTurno():
+    """Simula la solicitud de un turno con horarios aleatorios disponibles"""
+    print("\n Obteniendo horarios disponibles...")
+    # Generamos 3 horarios aleatorios como ejemplo
+    horarios_disponibles = [
+        "Lunes 04/11 - 10:00 hs",
+        "Miércoles 06/11 - 15:30 hs",
+        "Viernes 08/11 - 09:00 hs"
+    ]
+    print("\nHorarios disponibles:")
+    for i, h in enumerate(horarios_disponibles, 1):
+        print(f"  {i}. {h}")
+    
+    eleccion = input("\nIngrese el número del horario que desea reservar: ")
+    if eleccion in ['1', '2', '3']:
+        elegido = horarios_disponibles[int(eleccion) - 1]
+        print(f" Turno reservado con éxito: {elegido}")
+    else:
+        print(" Opción inválida. No se pudo reservar el turno.")
 
 
 # --- INTERACCIONES DEL CHATBOT ---
+# --- INTERACCIONES DEL CHATBOT ---
 
 # MENSAJE INICIAL
-  print("\n**¡Hola! Soy Telmo, tu asistente virtual**")
+print("\n**¡Hola! Soy Telmo, tu asistente virtual**")
 
 # SOLICITAR DNI CON input() Y ALMACENARLO EN UNA VARIABLE
+dni_ingresado = int(input("Por favor, ingresa tu DNI: "))
 
 # BUSCAR USUARIO SEGÚN SU DNI Y ALMACENARLO EN UNA VARIABLE LLAMADA "usuarioActual"
+usuarioActual = buscarUsuarioPorDni(dni_ingresado)
 
-# SALUDAR AL "usuarioActual" SEGÚN SU NOMBRE
+# VERIFICAR SI SE ENCONTRÓ EL USUARIO
+if usuarioActual is None:
+    print(f"\n No se encontró ningún usuario con el DNI {dni_ingresado}.")
+    print("\n**¡Gracias por utilizar el servicio de autogestión!**")
+else:
+    # SALUDAR AL "usuarioActual" SEGÚN SU NOMBRE
+    print(f"\n¡Hola {usuarioActual['Nombre']}! Bienvenido/a al sistema.")
 
+    # BUCLE DEL CHATBOT - PERMITIR ELEGIR OPCIONES HASTA QUE DESEE TERMINAR
+    continuar = "SI"
+    while continuar == "SI":
+        opcion = input("""
+ Ingrese el número de opción que desea:
+ 
+ 1. Consultar saldo
+ 2. Consultar facturas de servicios vencidas
+ 3. Pagar facturas
+ 4. Consultar sucursales
+ 5. Solicitar un turno
+ >>>>>>>>>>>>: """)
 
-# BUCLE DEL CHATBOT - PERMITIR ELEGIR OPCIONES HASTA QUE DESEE TERMINAR
+        # VERIFICAR QUE LA OPCIÓN INGRESADA SEA CORRECTA
+        if opcion not in ["1", "2", "3", "4", "5"]:
+            print("\n Opción inválida. Por favor, ingresa un número del 1 al 5.")
+        else:
+            # USAR UN CONDICIONAL PARA EJECUTAR LA FUNCIÓN QUE CORRESPONDA SEGÚN LA ELECCIÓN
+            if opcion == "1":
+                saldo = consultarSaldo(usuarioActual)
+                print(f" Tu saldo disponible es: ${saldo}")
+            
+            elif opcion == "2":
+                facturas = consultarFacturas(usuarioActual)
+                if not facturas:
+                    print(" No tienes facturas vencidas.")
+                else:
+                    print(f" Tienes {len(facturas)} factura(s) vencida(s):")
+                    for i, f in enumerate(facturas, 1):
+                        print(f"  {i}. {f['Servicio']} | Vto: {f['Vencimiento']} | ${f['Valor']}")
+            
+            elif opcion == "3":
+                pagarFacturas(usuarioActual)
+            
+            elif opcion == "4":
+                consultarSucursales()
+            
+            elif opcion == "5":
+                sacarTurno()
 
-continuar = "SI"
-while continuar == "SI":
-   opcion = input("""
-  Ingrese el número de opción que desea:
-  
-  1. Consultar saldo
-  2. Consultar facturas de servicios vencidas
-  3. Pagar facturas
-  4. Consultar sucursales
-  5. Solicitar un turno
-  >>>>>>>>>>>>: """)
+        # PREGUNTAR SI DESEA CONTINUAR
+        continuar = input("\n¿Deseas realizar otra operación? (SI/NO): ").strip().upper()
 
-# VERIFICAR QUE LA OPCIÓN INGRESADA SEA CORRECTA
+    # CUANDO TERMINA EL BUCLE, SE MUESTRA UN MENSAJE DE DESPEDIDA
+    print("\n**¡Gracias por utilizar el servicio de autogestión!**")
 
-# USAR UN CONDICIONAL PARA EJECUTAR LA FUNCIÓN QUE CORRESPONDA SEGÚN LA ELECCIÓN
-
-# PREGUNTAR SI DESEA CONTINUAR
-  continuar = "NO"
-
-
-# CUANDO TERMINA EL BUCLE, SE MUESTRA UN MENSAJE DE DESPEDIDA
-  print("\n**¡Gracias por utilizar el servicio de autogestión!**")
