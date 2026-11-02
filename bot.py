@@ -133,17 +133,18 @@ sucursales = {"Oeste": ["Merlo", "Castelar", "Ramos Mejía"],
 # --- FUNCIONES DEL CHATBOT ---
 
 # FUNCIÓN PARA BUSCAR USUARIO POR DNI
-def buscarUsuarioPorDni(nroBuscado):
-  print("\nBuscando usuario...")
-  for u in usuarios:
-    if u['Dni'] == nroBuscado:
-      return u
-  return None
+"""Busca un usuario por DNI y devuelve sus datos o None si no existe"""
+    print("\nBuscando usuario...")
+    for u in usuarios:
+        if u['Dni'] == nroBuscado:
+            return u
+    return None
 
 # FUNCIÓN PARA CONSULTAR EL SALDO
 def consultarSaldo(usuario):
-  print("\nConsultando Saldo...")
-  return usuario['Saldo']
+    """Devuelve el saldo del usuario"""
+    print("\nConsultando Saldo...")
+    return usuario['Saldo']
 
 # FUNCIÓN PARA CONSULTAR FACTURAS
 def consultarFacturas(usuario):
@@ -153,7 +154,33 @@ def consultarFacturas(usuario):
 # FUNCIÓN PARA PAGAR FACTURAS
 def pagarFacturas(usuario):
   print("\nPagando Facturas...")
+
+
 # LAS FACTURAS SOLO SE PAGAN SI TIENES SALDO SUFICIENTE
+pagarFacturas(usuario):
+    """Calcula el total de facturas, si hay saldo suficiente las descuenta y las elimina"""
+    print("\nProcesando pago de facturas...")
+    facturas = usuario['FacturasAdeudadas']
+    if not facturas:
+        print(" No tienes facturas pendientes de pago.")
+        return True
+    
+    total_a_pagar = sum(f['Valor'] for f in facturas)
+    saldo_actual = usuario['Saldo']
+    
+    print(f" Total a pagar: ${total_a_pagar}")
+    print(f" Saldo disponible: ${saldo_actual}")
+    
+    if saldo_actual >= total_a_pagar:
+        usuario['Saldo'] -= total_a_pagar
+        usuario['FacturasAdeudadas'] = []
+        print(" Pago realizado con éxito. Todas las facturas han sido canceladas.")
+        print(f" Saldo restante: ${usuario['Saldo']}")
+        return True
+    else:
+        print(f" Saldo insuficiente. Faltan ${total_a_pagar - saldo_actual} para completar el pago.")
+        return False
+
 # SI LAS FACTURAS SE PAGAN, SE BORRAN DEL DICCIONARIO
 
 # FUNCIÓN PARA CONSULTAR SUCURSALES
