@@ -1,1 +1,323 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buscaminas</title>
+
+<style>
+body {
+  background: #172033;
+  color: white;
+  font-family: Arial;
+  text-align: center;
+}
+
+h1 {
+  color: #ffd166;
+}
+
+.game {
+  background: #253249;
+  display: inline-block;
+  padding: 25px;
+  border-radius: 15px;
+  margin-top: 30px;
+}
+
+.info {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  font-size: 22px;
+  margin: 20px 0;
+}
+
+#restart {
+  font-size: 25px;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  background: #ffd166;
+  padding: 8px;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(9, 32px);
+  gap: 3px;
+  background: #111827;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.cell {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 4px;
+  background: #8fa5c2;
+  font-weight: bold;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.cell:hover {
+  background: #bfd1e7;
+}
+
+.cell.open {
+  background: #e2e8f0;
+}
+
+.cell.mine {
+  background: #f87171;
+}
+
+.cell.flag {
+  background: #f7c66b;
+}
+
+#message {
+  font-size: 19px;
+  font-weight: bold;
+}
+
+.help {
+  font-size: 12px;
+  color: #cbd5e1;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+  <h1>💣 BUSCAMINAS</h1>
+
+  <div class="info">
+    <span>🚩 <span id="flags">10</span></span>
+    <button id="restart" onclick="newGame()">🙂</button>
+    <span>⏱️ <span id="time">0</span></span>
+  </div>
+
+  <div id="board"></div>
+
+  <p id="message">¡Buena suerte!</p>
+
+  <p class="help">
+    Clic izquierdo: descubrir<br>
+    Clic derecho: colocar bandera
+  </p>
+
+</div>
+
+<script>
+const size = 9;
+const totalMines = 10;
+
+let board = [];
+let gameOver = false;
+let firstClick = true;
+let flags = 0;
+let seconds = 0;
+let timer;
+
+// Obtener las casillas vecinas
+function neighbors(r, c) {
+  let result = [];
+
+  for (let y = -1; y <= 1; y++) {
+    for (let x = -1; x <= 1; x++) {
+      let nr = r + y;
+      let nc = c + x;
+
+      if (
+        (x !== 0 || y !== 0) &&
+        nr >= 0 && nr < size &&
+        nc >= 0 && nc < size
+      ) {
+        result.push(board[nr][nc]);
+      }
+    }
+  }
+
+  return result;
+}
+
+// Crear una partida nueva
+function newGame() {
+  clearInterval(timer);
+
+  board = [];
+  gameOver = false;
+  firstClick = true;
+  flags = 0;
+  seconds = 0;
+
+  document.getElementById("time").textContent = 0;
+  document.getElementById("flags").textContent = totalMines;
+  document.getElementById("message").textContent = "¡Buena suerte!";
+  document.getElementById("restart").textContent = "🙂";
+
+  const container = document.getElementById("board");
+  container.innerHTML = "";
+
+  for (let r = 0; r < size; r++) {
+    let row = [];
+
+    for (let c = 0; c < size; c++) {
+      let button = document.createElement("button");
+      button.className = "cell";
+
+      button.onclick = () => reveal(r, c);
+
+      button.oncontextmenu = (event) => {
+        event.preventDefault();
+        putFlag(r, c);
+      };
+
+      container.appendChild(button);
+
+      row.push({
+        r, c,
+        mine: false,
+        count: 0,
+        open: false,
+        flag: false,
+        button
+      });
+    }
+
+    board.push(row);
+  }
+}
+
+// Colocar las minas aleatoriamente
+function placeMines(safeR, safeC) {
+  let placed = 0;
+
+  while (placed < totalMines) {
+    let r = Math.floor(Math.random() * size);
+    let c = Math.floor(Math.random() * size);
+
+    if (board[r][c].mine ||
+        (r === safeR && c === safeC)) {
+      continue;
+    }
+
+    board[r][c].mine = true;
+    placed++;
+  }
+
+  // Contar las minas cercanas
+  for (let row of board) {
+    for (let cell of row) {
+      cell.count = neighbors(cell.r, cell.c)
+        .filter(n => n.mine).length;
+    }
+  }
+}
+
+// Descubrir una casilla
+function reveal(r, c) {
+  if (gameOver) return;
+
+  let cell = board[r][c];
+
+  if (cell.open || cell.flag) return;
+
+  if (firstClick) {
+    placeMines(r, c);
+    firstClick = false;
+
+    timer = setInterval(() => {
+      seconds++;
+      document.getElementById("time").textContent = seconds;
+    }, 1000);
+  }
+
+  if (cell.mine) {
+    gameOver = true;
+    clearInterval(timer);
+
+    document.getElementById("message").textContent =
+      "💥 ¡Perdiste!";
+    document.getElementById("restart").textContent = "😵";
+
+    for (let row of board) {
+      for (let item of row) {
+        if (item.mine) {
+          item.button.textContent = "💣";
+          item.button.classList.add("mine");
+        }
+      }
+    }
+    return;
+  }
+
+  // Descubrir zonas vacías
+  let pending = [cell];
+
+  while (pending.length > 0) {
+    let current = pending.pop();
+
+    if (current.open || current.flag || current.mine) {
+      continue;
+    }
+
+    current.open = true;
+    current.button.classList.add("open");
+
+    if (current.count > 0) {
+      current.button.textContent = current.count;
+    } else {
+      pending.push(...neighbors(current.r, current.c));
+    }
+  }
+
+  checkWin();
+}
+
+// Colocar o quitar banderas
+function putFlag(r, c) {
+  if (gameOver) return;
+
+  let cell = board[r][c];
+
+  if (cell.open) return;
+  if (!cell.flag && flags >= totalMines) return;
+
+  cell.flag = !cell.flag;
+  flags += cell.flag ? 1 : -1;
+
+  cell.button.textContent = cell.flag ? "🚩" : "";
+  cell.button.classList.toggle("flag", cell.flag);
+
+  document.getElementById("flags").textContent =
+    totalMines - flags;
+}
+
+// Comprobar si ganó
+function checkWin() {
+  let opened = board.flat().filter(c => c.open).length;
+
+  if (opened === size * size - totalMines) {
+    gameOver = true;
+    clearInterval(timer);
+
+    document.getElementById("message").textContent =
+      "🎉 ¡Ganaste!";
+    document.getElementById("restart").textContent = "😎";
+  }
+}
+
+// Iniciar
+newGame();
+</script>
+
+</body>
+</html>
+
