@@ -3,143 +3,243 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Buscaminas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buscaminas 💣</title>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
+  margin: 0;
+  min-height: 100vh;
   background: #172033;
   color: white;
-  font-family: Arial;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.game {
+  width: min(96vw, 1050px);
+  background: #253249;
+  padding: 25px;
+  border-radius: 18px;
   text-align: center;
+  box-shadow: 0 12px 35px #0005;
 }
 
 h1 {
   color: #ffd166;
+  margin-top: 0;
 }
 
-.game {
-  background: #253249;
-  display: inline-block;
-  padding: 25px;
-  border-radius: 15px;
-  margin-top: 30px;
+select, button {
+  cursor: pointer;
 }
 
-.info {
+select {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+}
+
+.status {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
+  max-width: 380px;
+  margin: 20px auto;
   font-size: 22px;
-  margin: 20px 0;
 }
 
 #restart {
-  font-size: 25px;
-  cursor: pointer;
+  background: #ffd166;
   border: none;
   border-radius: 8px;
-  background: #ffd166;
+  padding: 10px;
+  font-size: 25px;
+}
+
+.board-scroll {
+  overflow-x: auto;
   padding: 8px;
 }
 
-#board {
+.board {
   display: grid;
-  grid-template-columns: repeat(9, 32px);
   gap: 3px;
-  background: #111827;
+  width: max-content;
+  margin: auto;
   padding: 8px;
+  background: #111827;
   border-radius: 8px;
 }
 
 .cell {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: none;
   border-radius: 4px;
   background: #8fa5c2;
-  font-weight: bold;
   font-size: 17px;
-  cursor: pointer;
+  font-weight: bold;
+  padding: 0;
 }
 
-.cell:hover {
+.cell:hover:not(.revealed) {
   background: #bfd1e7;
 }
 
-.cell.open {
+.cell.revealed {
   background: #e2e8f0;
+  cursor: default;
+}
+
+.cell.flagged {
+  background: #f7c66b;
 }
 
 .cell.mine {
   background: #f87171;
 }
 
-.cell.flag {
-  background: #f7c66b;
-}
+.n1 { color: #2563eb; }
+.n2 { color: #15803d; }
+.n3 { color: #dc2626; }
+.n4 { color: #6d28d9; }
+.n5 { color: #991b1b; }
+.n6 { color: #0891b2; }
+.n7 { color: #111827; }
+.n8 { color: #475569; }
 
 #message {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: bold;
 }
 
 .help {
-  font-size: 12px;
   color: #cbd5e1;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .game {
+    padding: 12px;
+  }
+
+  .cell {
+    width: 27px;
+    height: 27px;
+    font-size: 15px;
+  }
 }
 </style>
 </head>
 
 <body>
 
-<div class="game">
+<main class="game">
 
-  <h1>💣 BUSCAMINAS</h1>
+  <h1>💣 BUSCAMINAS 💣</h1>
 
-  <div class="info">
-    <span>🚩 <span id="flags">10</span></span>
-    <button id="restart" onclick="newGame()">🙂</button>
-    <span>⏱️ <span id="time">0</span></span>
+  <p>Descubrí todas las casillas sin tocar una mina.</p>
+
+  <label for="difficulty">Dificultad:</label>
+
+  <select id="difficulty">
+    <option value="easy">Fácil - 9x9</option>
+    <option value="medium">Medio - 16x16</option>
+    <option value="hard">Difícil - 16x30</option>
+  </select>
+
+  <div class="status">
+    <span>🚩 <strong id="mines-left">10</strong></span>
+
+    <button id="restart" aria-label="Reiniciar">
+      🙂
+    </button>
+
+    <span>⏱️ <strong id="timer">0</strong>s</span>
   </div>
 
-  <div id="board"></div>
+  <div class="board-scroll">
+    <div id="board" class="board"></div>
+  </div>
 
-  <p id="message">¡Buena suerte!</p>
+  <p id="message" role="status">¡Buena suerte!</p>
 
   <p class="help">
-    Clic izquierdo: descubrir<br>
-    Clic derecho: colocar bandera
+    Clic izquierdo: descubrir casilla.
+    Clic derecho: colocar bandera.
   </p>
 
-</div>
+</main>
 
 <script>
-const size = 9;
-const totalMines = 10;
+// ======================================
+// CONFIGURACIÓN DEL JUEGO
+// ======================================
+
+const levels = {
+  easy: {
+    rows: 9,
+    cols: 9,
+    mines: 10
+  },
+  medium: {
+    rows: 16,
+    cols: 16,
+    mines: 40
+  },
+  hard: {
+    rows: 16,
+    cols: 30,
+    mines: 99
+  }
+};
+
+const boardElement = document.getElementById("board");
+const difficulty = document.getElementById("difficulty");
+const minesLeft = document.getElementById("mines-left");
+const timerElement = document.getElementById("timer");
+const message = document.getElementById("message");
+const restart = document.getElementById("restart");
 
 let board = [];
-let gameOver = false;
-let firstClick = true;
+let config;
 let flags = 0;
+let revealed = 0;
 let seconds = 0;
-let timer;
+let timer = null;
+let firstClick = true;
+let gameOver = false;
 
-// Obtener las casillas vecinas
-function neighbors(r, c) {
-  let result = [];
+// ======================================
+// OBTENER CASILLAS VECINAS
+// ======================================
 
-  for (let y = -1; y <= 1; y++) {
-    for (let x = -1; x <= 1; x++) {
-      let nr = r + y;
-      let nc = c + x;
+function neighbors(row, col) {
+  const result = [];
+
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+
+      if (dr === 0 && dc === 0) continue;
+
+      const r = row + dr;
+      const c = col + dc;
 
       if (
-        (x !== 0 || y !== 0) &&
-        nr >= 0 && nr < size &&
-        nc >= 0 && nc < size
+        r >= 0 &&
+        r < config.rows &&
+        c >= 0 &&
+        c < config.cols
       ) {
-        result.push(board[nr][nc]);
+        result.push(board[r][c]);
       }
     }
   }
@@ -147,47 +247,24 @@ function neighbors(r, c) {
   return result;
 }
 
-// Crear una partida nueva
-function newGame() {
-  clearInterval(timer);
+// ======================================
+// CREAR TABLERO
+// ======================================
 
+function createBoard() {
   board = [];
-  gameOver = false;
-  firstClick = true;
-  flags = 0;
-  seconds = 0;
 
-  document.getElementById("time").textContent = 0;
-  document.getElementById("flags").textContent = totalMines;
-  document.getElementById("message").textContent = "¡Buena suerte!";
-  document.getElementById("restart").textContent = "🙂";
+  for (let r = 0; r < config.rows; r++) {
+    const row = [];
 
-  const container = document.getElementById("board");
-  container.innerHTML = "";
-
-  for (let r = 0; r < size; r++) {
-    let row = [];
-
-    for (let c = 0; c < size; c++) {
-      let button = document.createElement("button");
-      button.className = "cell";
-
-      button.onclick = () => reveal(r, c);
-
-      button.oncontextmenu = (event) => {
-        event.preventDefault();
-        putFlag(r, c);
-      };
-
-      container.appendChild(button);
-
+    for (let c = 0; c < config.cols; c++) {
       row.push({
-        r, c,
+        row: r,
+        col: c,
         mine: false,
         count: 0,
-        open: false,
-        flag: false,
-        button
+        revealed: false,
+        flagged: false
       });
     }
 
@@ -195,127 +272,310 @@ function newGame() {
   }
 }
 
-// Colocar las minas aleatoriamente
-function placeMines(safeR, safeC) {
-  let placed = 0;
+// ======================================
+// COLOCAR MINAS ALEATORIAMENTE
+// ======================================
 
-  while (placed < totalMines) {
-    let r = Math.floor(Math.random() * size);
-    let c = Math.floor(Math.random() * size);
+function placeMines(safeRow, safeCol) {
 
-    if (board[r][c].mine ||
-        (r === safeR && c === safeC)) {
-      continue;
-    }
+  const forbidden = new Set([
+    `${safeRow},${safeCol}`,
+    ...neighbors(safeRow, safeCol).map(
+      cell => `${cell.row},${cell.col}`
+    )
+  ]);
 
-    board[r][c].mine = true;
-    placed++;
+  const positions = board.flat().filter(
+    cell => !forbidden.has(`${cell.row},${cell.col}`)
+  );
+
+  // Mezclar posiciones
+  for (let i = positions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+
+    [positions[i], positions[j]] =
+      [positions[j], positions[i]];
   }
 
-  // Contar las minas cercanas
-  for (let row of board) {
-    for (let cell of row) {
-      cell.count = neighbors(cell.r, cell.c)
-        .filter(n => n.mine).length;
+  // Colocar minas
+  positions.slice(0, config.mines).forEach(cell => {
+    cell.mine = true;
+  });
+
+  // Calcular números
+  for (const cell of board.flat()) {
+    if (!cell.mine) {
+      cell.count = neighbors(cell.row, cell.col)
+        .filter(neighbor => neighbor.mine).length;
     }
   }
 }
 
-// Descubrir una casilla
-function reveal(r, c) {
-  if (gameOver) return;
+// ======================================
+// ACTUALIZAR CASILLAS
+// ======================================
 
-  let cell = board[r][c];
+function updateCell(cell) {
 
-  if (cell.open || cell.flag) return;
+  const element = boardElement.children[
+    cell.row * config.cols + cell.col
+  ];
 
-  if (firstClick) {
-    placeMines(r, c);
-    firstClick = false;
+  element.className = "cell";
+  element.textContent = "";
 
-    timer = setInterval(() => {
-      seconds++;
-      document.getElementById("time").textContent = seconds;
-    }, 1000);
+  if (cell.revealed) {
+    element.classList.add("revealed");
+
+    if (cell.mine) {
+      element.classList.add("mine");
+      element.textContent = "💣";
+    } else if (cell.count > 0) {
+      element.textContent = cell.count;
+      element.classList.add(`n${cell.count}`);
+    }
+
+  } else if (cell.flagged) {
+    element.classList.add("flagged");
+    element.textContent = "🚩";
   }
 
-  if (cell.mine) {
-    gameOver = true;
-    clearInterval(timer);
+  element.setAttribute(
+    "aria-label",
+    cell.revealed
+      ? (cell.mine ? "Mina" : `${cell.count} minas cercanas`)
+      : (cell.flagged ? "Bandera" : "Casilla oculta")
+  );
+}
 
-    document.getElementById("message").textContent =
-      "💥 ¡Perdiste!";
-    document.getElementById("restart").textContent = "😵";
+// ======================================
+// CRONÓMETRO
+// ======================================
 
-    for (let row of board) {
-      for (let item of row) {
-        if (item.mine) {
-          item.button.textContent = "💣";
-          item.button.classList.add("mine");
+function startTimer() {
+  if (timer !== null) return;
+
+  timer = setInterval(() => {
+    seconds++;
+    timerElement.textContent = seconds;
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timer);
+  timer = null;
+}
+
+// ======================================
+// DESCUBRIR CASILLAS VACÍAS
+// ======================================
+
+function expand(row, col) {
+
+  const pending = [board[row][col]];
+
+  while (pending.length > 0) {
+
+    const cell = pending.pop();
+
+    if (
+      cell.revealed ||
+      cell.flagged ||
+      cell.mine
+    ) {
+      continue;
+    }
+
+    cell.revealed = true;
+    revealed++;
+
+    updateCell(cell);
+
+    if (cell.count === 0) {
+      for (const next of neighbors(cell.row, cell.col)) {
+        if (
+          !next.revealed &&
+          !next.flagged &&
+          !next.mine
+        ) {
+          pending.push(next);
         }
       }
     }
+  }
+}
+
+// ======================================
+// COMPROBAR VICTORIA
+// ======================================
+
+function checkWin() {
+
+  const safeCells =
+    config.rows * config.cols - config.mines;
+
+  if (revealed === safeCells) {
+
+    gameOver = true;
+    stopTimer();
+
+    restart.textContent = "😎";
+    message.textContent = "🎉 ¡GANASTE!";
+
+    for (const cell of board.flat()) {
+      if (cell.mine) {
+        cell.flagged = true;
+        updateCell(cell);
+      }
+    }
+
+    flags = config.mines;
+    minesLeft.textContent = 0;
+  }
+}
+
+// ======================================
+// DESCUBRIR UNA CASILLA
+// ======================================
+
+function revealCell(row, col) {
+
+  if (gameOver) return;
+
+  const cell = board[row][col];
+
+  if (cell.revealed || cell.flagged) return;
+
+  // El primer clic siempre es seguro.
+  if (firstClick) {
+    placeMines(row, col);
+    firstClick = false;
+    startTimer();
+  }
+
+  // Si hay una mina, termina el juego.
+  if (cell.mine) {
+
+    gameOver = true;
+    stopTimer();
+
+    restart.textContent = "😵";
+    message.textContent = "💥 ¡PERDISTE!";
+
+    for (const item of board.flat()) {
+      if (item.mine) {
+        item.revealed = true;
+        updateCell(item);
+      }
+    }
+
     return;
   }
 
-  // Descubrir zonas vacías
-  let pending = [cell];
-
-  while (pending.length > 0) {
-    let current = pending.pop();
-
-    if (current.open || current.flag || current.mine) {
-      continue;
-    }
-
-    current.open = true;
-    current.button.classList.add("open");
-
-    if (current.count > 0) {
-      current.button.textContent = current.count;
-    } else {
-      pending.push(...neighbors(current.r, current.c));
-    }
-  }
-
+  expand(row, col);
   checkWin();
 }
 
-// Colocar o quitar banderas
-function putFlag(r, c) {
+// ======================================
+// COLOCAR BANDERAS
+// ======================================
+
+function toggleFlag(row, col) {
+
   if (gameOver) return;
 
-  let cell = board[r][c];
+  const cell = board[row][col];
 
-  if (cell.open) return;
-  if (!cell.flag && flags >= totalMines) return;
+  if (cell.revealed) return;
 
-  cell.flag = !cell.flag;
-  flags += cell.flag ? 1 : -1;
+  if (!cell.flagged && flags >= config.mines) {
+    return;
+  }
 
-  cell.button.textContent = cell.flag ? "🚩" : "";
-  cell.button.classList.toggle("flag", cell.flag);
+  cell.flagged = !cell.flagged;
 
-  document.getElementById("flags").textContent =
-    totalMines - flags;
+  flags += cell.flagged ? 1 : -1;
+
+  minesLeft.textContent = config.mines - flags;
+
+  updateCell(cell);
 }
 
-// Comprobar si ganó
-function checkWin() {
-  let opened = board.flat().filter(c => c.open).length;
+// ======================================
+// DIBUJAR TABLERO
+// ======================================
 
-  if (opened === size * size - totalMines) {
-    gameOver = true;
-    clearInterval(timer);
+function drawBoard() {
 
-    document.getElementById("message").textContent =
-      "🎉 ¡Ganaste!";
-    document.getElementById("restart").textContent = "😎";
+  boardElement.innerHTML = "";
+
+  const cellSize =
+    window.innerWidth <= 600 ? 27 : 30;
+
+  boardElement.style.gridTemplateColumns =
+    `repeat(${config.cols}, ${cellSize}px)`;
+
+  for (const cell of board.flat()) {
+
+    const button = document.createElement("button");
+
+    button.type = "button";
+    button.className = "cell";
+
+    // Clic izquierdo
+    button.addEventListener("click", () => {
+      revealCell(cell.row, cell.col);
+    });
+
+    // Clic derecho
+    button.addEventListener("contextmenu", event => {
+      event.preventDefault();
+      toggleFlag(cell.row, cell.col);
+    });
+
+    boardElement.appendChild(button);
+
+    updateCell(cell);
   }
 }
 
-// Iniciar
+// ======================================
+// REINICIAR JUEGO
+// ======================================
+
+function newGame() {
+
+  stopTimer();
+
+  config = levels[difficulty.value];
+
+  flags = 0;
+  revealed = 0;
+  seconds = 0;
+  firstClick = true;
+  gameOver = false;
+
+  timerElement.textContent = 0;
+  minesLeft.textContent = config.mines;
+
+  message.textContent = "¡Buena suerte!";
+  restart.textContent = "🙂";
+
+  createBoard();
+  drawBoard();
+}
+
+// ======================================
+// EVENTOS
+// ======================================
+
+restart.addEventListener("click", newGame);
+
+difficulty.addEventListener("change", newGame);
+
+// Iniciar el juego
 newGame();
+
 </script>
 
 </body>
