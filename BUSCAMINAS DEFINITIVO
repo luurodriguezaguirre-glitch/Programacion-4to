@@ -1,322 +1,292 @@
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Buscaminas</title>
+import tkinter as tk
+from tkinter import messagebox
+import random
 
-<style>
-body {
-  background: #172033;
-  color: white;
-  font-family: Arial;
-  text-align: center;
-}
+FILAS = 9
+COLUMNAS = 9
+MINAS = 10
 
-h1 {
-  color: #ffd166;
-}
+class Buscaminas:
+    def __init__(self, ventana):
+        self.ventana = ventana
+        self.ventana.title("Buscaminas")
+        self.ventana.resizable(False, False)
+        self.ventana.configure(bg="#263238")
 
-.game {
-  background: #253249;
-  display: inline-block;
-  padding: 25px;
-  border-radius: 15px;
-  margin-top: 30px;
-}
-
-.info {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  font-size: 22px;
-  margin: 20px 0;
-}
-
-#restart {
-  font-size: 25px;
-  cursor: pointer;
-  border: none;
-  border-radius: 8px;
-  background: #ffd166;
-  padding: 8px;
-}
-
-#board {
-  display: grid;
-  grid-template-columns: repeat(9, 32px);
-  gap: 3px;
-  background: #111827;
-  padding: 8px;
-  border-radius: 8px;
-}
-
-.cell {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 4px;
-  background: #8fa5c2;
-  font-weight: bold;
-  font-size: 17px;
-  cursor: pointer;
-}
-
-.cell:hover {
-  background: #bfd1e7;
-}
-
-.cell.open {
-  background: #e2e8f0;
-}
-
-.cell.mine {
-  background: #f87171;
-}
-
-.cell.flag {
-  background: #f7c66b;
-}
-
-#message {
-  font-size: 19px;
-  font-weight: bold;
-}
-
-.help {
-  font-size: 12px;
-  color: #cbd5e1;
-}
-</style>
-</head>
-
-<body>
-
-<div class="game">
-
-  <h1>💣 BUSCAMINAS</h1>
-
-  <div class="info">
-    <span>🚩 <span id="flags">10</span></span>
-    <button id="restart" onclick="newGame()">🙂</button>
-    <span>⏱️ <span id="time">0</span></span>
-  </div>
-
-  <div id="board"></div>
-
-  <p id="message">¡Buena suerte!</p>
-
-  <p class="help">
-    Clic izquierdo: descubrir<br>
-    Clic derecho: colocar bandera
-  </p>
-
-</div>
-
-<script>
-const size = 9;
-const totalMines = 10;
-
-let board = [];
-let gameOver = false;
-let firstClick = true;
-let flags = 0;
-let seconds = 0;
-let timer;
-
-// Obtener las casillas vecinas
-function neighbors(r, c) {
-  let result = [];
-
-  for (let y = -1; y <= 1; y++) {
-    for (let x = -1; x <= 1; x++) {
-      let nr = r + y;
-      let nc = c + x;
-
-      if (
-        (x !== 0 || y !== 0) &&
-        nr >= 0 && nr < size &&
-        nc >= 0 && nc < size
-      ) {
-        result.push(board[nr][nc]);
-      }
-    }
-  }
-
-  return result;
-}
-
-// Crear una partida nueva
-function newGame() {
-  clearInterval(timer);
-
-  board = [];
-  gameOver = false;
-  firstClick = true;
-  flags = 0;
-  seconds = 0;
-
-  document.getElementById("time").textContent = 0;
-  document.getElementById("flags").textContent = totalMines;
-  document.getElementById("message").textContent = "¡Buena suerte!";
-  document.getElementById("restart").textContent = "🙂";
-
-  const container = document.getElementById("board");
-  container.innerHTML = "";
-
-  for (let r = 0; r < size; r++) {
-    let row = [];
-
-    for (let c = 0; c < size; c++) {
-      let button = document.createElement("button");
-      button.className = "cell";
-
-      button.onclick = () => reveal(r, c);
-
-      button.oncontextmenu = (event) => {
-        event.preventDefault();
-        putFlag(r, c);
-      };
-
-      container.appendChild(button);
-
-      row.push({
-        r, c,
-        mine: false,
-        count: 0,
-        open: false,
-        flag: false,
-        button
-      });
-    }
-
-    board.push(row);
-  }
-}
-
-// Colocar las minas aleatoriamente
-function placeMines(safeR, safeC) {
-  let placed = 0;
-
-  while (placed < totalMines) {
-    let r = Math.floor(Math.random() * size);
-    let c = Math.floor(Math.random() * size);
-
-    if (board[r][c].mine ||
-        (r === safeR && c === safeC)) {
-      continue;
-    }
-
-    board[r][c].mine = true;
-    placed++;
-  }
-
-  // Contar las minas cercanas
-  for (let row of board) {
-    for (let cell of row) {
-      cell.count = neighbors(cell.r, cell.c)
-        .filter(n => n.mine).length;
-    }
-  }
-}
-
-// Descubrir una casilla
-function reveal(r, c) {
-  if (gameOver) return;
-
-  let cell = board[r][c];
-
-  if (cell.open || cell.flag) return;
-
-  if (firstClick) {
-    placeMines(r, c);
-    firstClick = false;
-
-    timer = setInterval(() => {
-      seconds++;
-      document.getElementById("time").textContent = seconds;
-    }, 1000);
-  }
-
-  if (cell.mine) {
-    gameOver = true;
-    clearInterval(timer);
-
-    document.getElementById("message").textContent =
-      "💥 ¡Perdiste!";
-    document.getElementById("restart").textContent = "😵";
-
-    for (let row of board) {
-      for (let item of row) {
-        if (item.mine) {
-          item.button.textContent = "💣";
-          item.button.classList.add("mine");
+        self.colores = {
+            1: "#1976D2",
+            2: "#388E3C",
+            3: "#D32F2F",
+            4: "#7B1FA2",
+            5: "#795548",
+            6: "#0097A7",
+            7: "#212121",
+            8: "#616161"
         }
-      }
-    }
-    return;
-  }
 
-  // Descubrir zonas vacías
-  let pending = [cell];
+        self.marco_superior = tk.Frame(
+            ventana, bg="#263238", pady=12
+        )
+        self.marco_superior.pack()
 
-  while (pending.length > 0) {
-    let current = pending.pop();
+        self.etiqueta_minas = tk.Label(
+            self.marco_superior,
+            font=("Arial", 14, "bold"),
+            fg="white",
+            bg="#263238"
+        )
+        self.etiqueta_minas.grid(row=0, column=0, padx=15)
 
-    if (current.open || current.flag || current.mine) {
-      continue;
-    }
+        self.boton_reiniciar = tk.Button(
+            self.marco_superior,
+            text="😊 Reiniciar",
+            font=("Arial", 12),
+            command=self.reiniciar
+        )
+        self.boton_reiniciar.grid(row=0, column=1, padx=10)
 
-    current.open = true;
-    current.button.classList.add("open");
+        self.etiqueta_tiempo = tk.Label(
+            self.marco_superior,
+            font=("Arial", 14, "bold"),
+            fg="white",
+            bg="#263238"
+        )
+        self.etiqueta_tiempo.grid(row=0, column=2, padx=15)
 
-    if (current.count > 0) {
-      current.button.textContent = current.count;
-    } else {
-      pending.push(...neighbors(current.r, current.c));
-    }
-  }
+        self.marco_tablero = tk.Frame(
+            ventana, bg="#455A64", padx=8, pady=8
+        )
+        self.marco_tablero.pack(padx=12, pady=(0, 12))
 
-  checkWin();
-}
+        self.botones = []
 
-// Colocar o quitar banderas
-function putFlag(r, c) {
-  if (gameOver) return;
+        for fila in range(FILAS):
+            fila_botones = []
 
-  let cell = board[r][c];
+            for columna in range(COLUMNAS):
+                boton = tk.Button(
+                    self.marco_tablero,
+                    width=3,
+                    height=1,
+                    font=("Arial", 15, "bold"),
+                    bg="#B0BEC5",
+                    relief="raised"
+                )
 
-  if (cell.open) return;
-  if (!cell.flag && flags >= totalMines) return;
+                boton.grid(row=fila, column=columna)
 
-  cell.flag = !cell.flag;
-  flags += cell.flag ? 1 : -1;
+                boton.bind(
+                    "<Button-1>",
+                    lambda evento, f=fila, c=columna:
+                    self.descubrir(f, c)
+                )
 
-  cell.button.textContent = cell.flag ? "🚩" : "";
-  cell.button.classList.toggle("flag", cell.flag);
+                boton.bind(
+                    "<Button-3>",
+                    lambda evento, f=fila, c=columna:
+                    self.bandera(f, c)
+                )
 
-  document.getElementById("flags").textContent =
-    totalMines - flags;
-}
+                fila_botones.append(boton)
 
-// Comprobar si ganó
-function checkWin() {
-  let opened = board.flat().filter(c => c.open).length;
+            self.botones.append(fila_botones)
 
-  if (opened === size * size - totalMines) {
-    gameOver = true;
-    clearInterval(timer);
+        self.reiniciar()
 
-    document.getElementById("message").textContent =
-      "🎉 ¡Ganaste!";
-    document.getElementById("restart").textContent = "😎";
-  }
-}
+    def reiniciar(self):
+        self.tablero = [
+            [0 for _ in range(COLUMNAS)]
+            for _ in range(FILAS)
+        ]
 
-// Iniciar
-newGame();
-</script>
+        self.descubiertas = set()
+        self.banderas = set()
 
-</body>
-</html>
+        self.primera_jugada = True
+        self.terminado = False
+        self.segundos = 0
+        self.temporizador_id = None
+
+        self.etiqueta_minas.config(
+            text=f"💣 Minas: {MINAS}"
+        )
+        self.etiqueta_tiempo.config(text="⏱ 0 s")
+        self.boton_reiniciar.config(text="😊 Reiniciar")
+
+        for fila in range(FILAS):
+            for columna in range(COLUMNAS):
+                self.botones[fila][columna].config(
+                    text="",
+                    bg="#B0BEC5",
+                    relief="raised",
+                    state="normal"
+                )
+
+        self.iniciar_temporizador()
+
+    def iniciar_temporizador(self):
+        if not self.terminado:
+            self.etiqueta_tiempo.config(
+                text=f"⏱ {self.segundos} s"
+            )
+            self.segundos += 1
+            self.temporizador_id = self.ventana.after(
+                1000, self.iniciar_temporizador
+            )
+
+    def colocar_minas(self, fila_segura, columna_segura):
+        posiciones = [
+            (f, c)
+            for f in range(FILAS)
+            for c in range(COLUMNAS)
+            if (f, c) != (fila_segura, columna_segura)
+        ]
+
+        minas_elegidas = random.sample(posiciones, MINAS)
+
+        for f, c in minas_elegidas:
+            self.tablero[f][c] = -1
+
+        for fila in range(FILAS):
+            for columna in range(COLUMNAS):
+                if self.tablero[fila][columna] == -1:
+                    continue
+
+                cantidad = 0
+
+                for f in range(max(0, fila - 1),
+                               min(FILAS, fila + 2)):
+                    for c in range(max(0, columna - 1),
+                                   min(COLUMNAS, columna + 2)):
+                        if self.tablero[f][c] == -1:
+                            cantidad += 1
+
+                self.tablero[fila][columna] = cantidad
+
+    def descubrir(self, fila, columna):
+        if self.terminado:
+            return
+
+        if (fila, columna) in self.banderas:
+            return
+
+        if (fila, columna) in self.descubiertas:
+            return
+
+        if self.primera_jugada:
+            self.colocar_minas(fila, columna)
+            self.primera_jugada = False
+
+        if self.tablero[fila][columna] == -1:
+            self.perder(fila, columna)
+            return
+
+        pendientes = [(fila, columna)]
+
+        while pendientes:
+            f, c = pendientes.pop()
+
+            if (f, c) in self.descubiertas:
+                continue
+
+            if (f, c) in self.banderas:
+                continue
+
+            self.descubiertas.add((f, c))
+
+            numero = self.tablero[f][c]
+            boton = self.botones[f][c]
+
+            boton.config(
+                text=str(numero) if numero > 0 else "",
+                bg="#ECEFF1",
+                relief="sunken",
+                fg=self.colores.get(numero, "black")
+            )
+
+            if numero == 0:
+                for nf in range(max(0, f - 1),
+                                min(FILAS, f + 2)):
+                    for nc in range(max(0, c - 1),
+                                    min(COLUMNAS, c + 2)):
+                        if (nf, nc) not in self.descubiertas:
+                            pendientes.append((nf, nc))
+
+        self.comprobar_victoria()
+
+    def bandera(self, fila, columna):
+        if self.terminado:
+            return
+
+        if (fila, columna) in self.descubiertas:
+            return
+
+        posicion = (fila, columna)
+        boton = self.botones[fila][columna]
+
+        if posicion in self.banderas:
+            self.banderas.remove(posicion)
+            boton.config(text="")
+        else:
+            self.banderas.add(posicion)
+            boton.config(text="🚩")
+
+        restantes = MINAS - len(self.banderas)
+
+        self.etiqueta_minas.config(
+            text=f"💣 Minas: {restantes}"
+        )
+
+    def perder(self, fila, columna):
+        self.terminado = True
+        self.detener_temporizador()
+
+        self.boton_reiniciar.config(text="😵 Reiniciar")
+
+        for f in range(FILAS):
+            for c in range(COLUMNAS):
+                if self.tablero[f][c] == -1:
+                    self.botones[f][c].config(
+                        text="💣",
+                        bg="#FFCDD2"
+                    )
+
+        self.botones[fila][columna].config(bg="#F44336")
+
+        messagebox.showinfo(
+            "Fin del juego",
+            "¡BOOM! Pisaste una mina.\nIntentá nuevamente."
+        )
+
+    def comprobar_victoria(self):
+        casillas_seguras = FILAS * COLUMNAS - MINAS
+
+        if len(self.descubiertas) == casillas_seguras:
+            self.terminado = True
+            self.detener_temporizador()
+
+            self.boton_reiniciar.config(text="😎 Reiniciar")
+
+            for f in range(FILAS):
+                for c in range(COLUMNAS):
+                    if self.tablero[f][c] == -1:
+                        self.botones[f][c].config(text="🚩")
+
+            self.etiqueta_minas.config(text="💣 Minas: 0")
+
+            messagebox.showinfo(
+                "¡Victoria!",
+                f"¡Ganaste!\nTiempo: {self.segundos - 1} segundos"
+            )
+
+    def detener_temporizador(self):
+        if self.temporizador_id is not None:
+            self.ventana.after_cancel(self.temporizador_id)
+            self.temporizador_id = None
+
+
+if __name__ == "__main__":
+    ventana = tk.Tk()
+    juego = Buscaminas(ventana)
+    ventana.mainloop()
